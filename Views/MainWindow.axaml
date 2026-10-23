@@ -1,0 +1,191 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:smartFactoryApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="smartFactoryApp.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="900"
+        Height="600"
+        Title="smartFactoryApp">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Image Source="avares://smartFactoryApp/Assets/factory_plan.png"
+               Stretch="None"/>
+
+        <Canvas x:Name="canvasFactory" HorizontalAlignment="Left" Height="600" VerticalAlignment="Top" Width="900">
+            <Canvas.Styles>
+                <Style Selector="Button">
+                    <Setter Property="Background" Value="#B9BDA5"/>
+                    <Setter Property="Foreground" Value="Black"/>
+                    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                    <Setter Property="VerticalAlignment" Value="Stretch"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                    <Setter Property="Margin" Value="2"/>
+                    <Setter Property="FontSize" Value="15"/>
+                </Style>
+            </Canvas.Styles>
+
+            <!-- ===== The factory floor: positions relative to the gray area ===== -->
+            <Canvas Canvas.Left="{Binding FloorX}" Canvas.Top="{Binding FloorY}">
+
+                <!-- Delivery line (top) -->
+                <Grid Canvas.Left="183" Canvas.Top="3" Width="186" Height="56"
+                      RowDefinitions="32,*" ColumnDefinitions="56,62,68" Background="White">
+                    <Border Grid.Column="0" Background="#FFC9B8" BorderBrush="Black" BorderThickness="1">
+                        <TextBlock Text="Recycle" FontWeight="Bold" FontSize="12" Foreground="Black"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="1" Background="#FFFFC0" BorderBrush="Black" BorderThickness="1">
+                        <TextBlock Text="Delivery" FontWeight="Bold" FontSize="12" Foreground="Black"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Border Grid.Column="2" Background="#D5FFC0" BorderBrush="Black" BorderThickness="1">
+                        <TextBlock Text="Customer" FontWeight="Bold" FontSize="12" Foreground="Black"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+
+                <!-- Red line (left, vertical) -->
+                <Rectangle Canvas.Left="73" Canvas.Top="94" Width="60" Height="160" Fill="White"/>
+<Image Source="avares://smartFactoryApp/Assets/production_red_2.png" Stretch="Fill"
+       Width="160" Height="60" Canvas.Left="23" Canvas.Top="144">
+    <Image.RenderTransform>
+        <RotateTransform Angle="90"/>
+    </Image.RenderTransform>
+</Image>
+
+                <!-- Blue line (right, vertical) -->
+                <Rectangle Canvas.Left="393" Canvas.Top="94" Width="60" Height="160" Fill="White"/>
+                <Border Canvas.Left="409" Canvas.Top="110" Width="29" Height="123" CornerRadius="14"
+                        Background="#3040D0" BorderBrush="Black" BorderThickness="2"/>
+
+                <!-- Recycle line (center) with the four colors -->
+                <Rectangle Canvas.Left="183" Canvas.Top="254" Width="160" Height="60" Fill="White"/>
+                <Border Canvas.Left="204" Canvas.Top="270" Width="123" Height="28" CornerRadius="14"
+                        BorderBrush="Black" BorderThickness="2" ClipToBounds="True">
+                    <Grid ColumnDefinitions="*,*,*,*">
+                        <Rectangle Grid.Column="0" Fill="#F5DC1E"/>
+                        <Rectangle Grid.Column="1" Fill="#E01020"/>
+                        <Rectangle Grid.Column="2" Fill="#2E9E2E"/>
+                        <Rectangle Grid.Column="3" Fill="#3040D0"/>
+                    </Grid>
+                </Border>
+
+                <!-- Yellow line (bottom left, horizontal) -->
+                <Rectangle Canvas.Left="53" Canvas.Top="394" Width="160" Height="60" Fill="White"/>
+                <Border Canvas.Left="74" Canvas.Top="410" Width="123" Height="28" CornerRadius="14"
+                        Background="#F5DC1E" BorderBrush="Black" BorderThickness="2"/>
+
+                <!-- Green line (bottom right, horizontal) -->
+                <Rectangle Canvas.Left="313" Canvas.Top="394" Width="160" Height="60" Fill="White"/>
+                <Border Canvas.Left="334" Canvas.Top="410" Width="123" Height="28" CornerRadius="14"
+                        Background="#2E9E2E" BorderBrush="Black" BorderThickness="2"/>
+            </Canvas>
+
+            <!-- ===== The moving bricks (absolute coordinates) ===== -->
+            <ItemsControl ItemsSource="{Binding AllBricks}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                    <Style Selector="ContentPresenter" x:DataType="vm:LegoBrickViewModel">
+                        <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                        <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                    </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LegoBrickViewModel">
+                        <Rectangle Width="{Binding BrickWidth}" Height="{Binding BrickHeight}"
+                                   Fill="{Binding Fill}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- ===== X / Y / Angle display ===== -->
+            <TextBlock Canvas.Left="50" Canvas.Top="48" FontSize="18" Foreground="Red"
+                       Text="{Binding RobotInfo}"/>
+
+            <!-- ===== The robot (30x65, red dot = TCP at the top middle) ===== -->
+            <Rectangle Width="30" Height="65"
+           Canvas.Left="{Binding RobotX}" Canvas.Top="{Binding RobotY}">
+    <Rectangle.Fill>
+        <ImageBrush Source="avares://smartFactoryApp/Assets/robot_2.png" Stretch="Fill"/>
+    </Rectangle.Fill>
+    <Rectangle.RenderTransform>
+        <RotateTransform Angle="{Binding RobotAngle}"/>
+    </Rectangle.RenderTransform>
+</Rectangle>
+
+            <!-- ===== Order panel (display only for now) ===== -->
+            <TextBlock Canvas.Left="628" Canvas.Top="14" Text="Order" FontSize="22" FontWeight="Bold" Foreground="Black"/>
+            <TextBlock Canvas.Left="798" Canvas.Top="34" Text="Delivered" FontSize="13" FontWeight="Bold" Foreground="Black"/>
+
+            <Border Canvas.Left="628" Canvas.Top="54" Width="74" Height="32" Background="#F5DC1E">
+                <TextBlock Text="yellow" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBox Canvas.Left="720" Canvas.Top="54" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="54" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+
+            <Border Canvas.Left="628" Canvas.Top="90" Width="74" Height="32" Background="#4169E1">
+                <TextBlock Text="blue" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBox Canvas.Left="720" Canvas.Top="90" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="90" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+
+            <Border Canvas.Left="628" Canvas.Top="126" Width="74" Height="32" Background="#A5142C">
+                <TextBlock Text="red" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBox Canvas.Left="720" Canvas.Top="126" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="126" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+
+            <Border Canvas.Left="628" Canvas.Top="162" Width="74" Height="32" Background="#2E9E2E">
+                <TextBlock Text="green" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBox Canvas.Left="720" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+
+            <!-- ===== Start / Stop (bricks) ===== -->
+            <Button Canvas.Left="626" Canvas.Top="204" Width="84" Height="32" Content="Start" Click="StartTimer_Click"/>
+            <Button Canvas.Left="714" Canvas.Top="204" Width="84" Height="32" Content="Stop" Click="StopTimer_Click"/>
+
+            <!-- ===== Move / Step mode and Undock ===== -->
+            <RadioButton Canvas.Left="655" Canvas.Top="455" GroupName="Mode" Content="Move" IsChecked="True"
+                         Foreground="Black" Click="MoveMode_Click"/>
+            <RadioButton Canvas.Left="655" Canvas.Top="491" GroupName="Mode" Content="Step"
+                         Foreground="Black" Click="StepMode_Click"/>
+            <Button Canvas.Left="660" Canvas.Top="528" Width="76" Height="32" Content="Undock"/>
+
+            <!-- ===== Direction and rotation buttons ===== -->
+            <Grid Canvas.Left="745" Canvas.Top="430" Width="134" Height="166"
+                  RowDefinitions="*,*,*,*" ColumnDefinitions="*,*,*">
+                <Button Grid.Row="0" Grid.Column="0" Content="↖" Click="MoveUpLeft_Click"/>
+                <Button Grid.Row="0" Grid.Column="1" Content="↑" Click="MoveUp_Click"/>
+                <Button Grid.Row="0" Grid.Column="2" Content="↗" Click="MoveUpRight_Click"/>
+
+                <Button Grid.Row="1" Grid.Column="0" Content="←" Click="MoveLeft_Click"/>
+                <Button Grid.Row="1" Grid.Column="1" Content="■" Click="StopRobot_Click"/>
+                <Button Grid.Row="1" Grid.Column="2" Content="→" Click="MoveRight_Click"/>
+
+                <Button Grid.Row="2" Grid.Column="0" Content="↙" Click="MoveDownLeft_Click"/>
+                <Button Grid.Row="2" Grid.Column="1" Content="↓" Click="MoveDown_Click"/>
+                <Button Grid.Row="2" Grid.Column="2" Content="↘" Click="MoveDownRight_Click"/>
+
+                <Button Grid.Row="3" Grid.Column="0" Content="↺" Click="MoveRotateLeft_Click"/>
+                <Button Grid.Row="3" Grid.Column="1" Content="0°" Click="ResetRotation_Click"/>
+                <Button Grid.Row="3" Grid.Column="2" Content="↻" Click="MoveRotateRight_Click"/>
+            </Grid>
+
+        </Canvas>
+    </Grid>
+
+</Window>
