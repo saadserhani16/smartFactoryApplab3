@@ -36,6 +36,22 @@
             <!-- ===== The factory floor: positions relative to the gray area ===== -->
             <Canvas Canvas.Left="{Binding FloorX}" Canvas.Top="{Binding FloorY}">
 
+                <!-- Arrow to the recycling (left of the delivery line) -->
+                <Grid Canvas.Left="62" Canvas.Top="3" Width="121" Height="56">
+                    <Polygon Points="0,28 30,2 30,16 120,16 120,40 30,40 30,54"
+                             Fill="#F4A6A6" Stroke="Black" StrokeThickness="1.5"/>
+                    <TextBlock Text="For Recycling" FontWeight="Bold" FontSize="11" Foreground="Black"
+                               Margin="28,0,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Arrow to the customers (right of the delivery line) -->
+                <Grid Canvas.Left="369" Canvas.Top="3" Width="120" Height="56">
+                    <Polygon Points="0,16 90,16 90,2 120,28 90,54 90,40 0,40"
+                             Fill="#A6E22E" Stroke="Black" StrokeThickness="1.5"/>
+                    <TextBlock Text="To Customers" FontWeight="Bold" FontSize="11" Foreground="Black"
+                               Margin="0,0,26,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+
                 <!-- Delivery line (top) -->
                 <Grid Canvas.Left="183" Canvas.Top="3" Width="186" Height="56"
                       RowDefinitions="32,*" ColumnDefinitions="56,62,68" Background="White">
@@ -91,7 +107,7 @@
             </Canvas>
 
             <!-- ===== X / Y / Angle display ===== -->
-            <TextBlock Canvas.Left="50" Canvas.Top="48" FontSize="18" Foreground="Red"
+            <TextBlock Canvas.Left="50" Canvas.Top="500" FontSize="14" Foreground="Red"
                        Text="{Binding RobotInfo}"/>
 
             <!-- ===== The robot (image, 30x65, gripper = top middle) ===== -->
@@ -121,7 +137,8 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:LegoBrickViewModel">
                         <Rectangle Width="{Binding BrickWidth}" Height="{Binding BrickHeight}"
-                                   Fill="{Binding Fill}" Stroke="Black" StrokeThickness="1">
+                                   Fill="{Binding Fill}" Stroke="Black" StrokeThickness="1"
+                                   Opacity="{Binding BrickOpacity}">
                             <Rectangle.RenderTransform>
                                 <RotateTransform Angle="{Binding Angle}"/>
                             </Rectangle.RenderTransform>
@@ -129,15 +146,12 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-             <!-- Gripper marker (the point that grabs the bricks) -->
+
+            <!-- Gripper marker (the point that grabs the bricks) -->
             <Ellipse Width="6" Height="6" Fill="Magenta"
                      Canvas.Left="{Binding GripperX}" Canvas.Top="{Binding GripperY}"/>
 
-            <!-- Docking status -->
-            <TextBlock Canvas.Left="628" Canvas.Top="260" FontSize="16" FontWeight="Bold" Foreground="Red"
-                       Text="{Binding DockInfo}"/>
-
-            <!-- ===== Order panel (display only for now) ===== -->
+            <!-- ===== Order panel ===== -->
             <TextBlock Canvas.Left="628" Canvas.Top="14" Text="Order" FontSize="22" FontWeight="Bold" Foreground="Black"/>
             <TextBlock Canvas.Left="798" Canvas.Top="34" Text="Delivered" FontSize="13" FontWeight="Bold" Foreground="Black"/>
 
@@ -145,29 +159,40 @@
                 <TextBlock Text="yellow" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <TextBox Canvas.Left="720" Canvas.Top="54" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
-            <TextBox Canvas.Left="800" Canvas.Top="54" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="54" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding YellowDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="90" Width="74" Height="32" Background="#4169E1">
                 <TextBlock Text="blue" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <TextBox Canvas.Left="720" Canvas.Top="90" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
-            <TextBox Canvas.Left="800" Canvas.Top="90" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="90" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding BlueDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="126" Width="74" Height="32" Background="#A5142C">
                 <TextBlock Text="red" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <TextBox Canvas.Left="720" Canvas.Top="126" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
-            <TextBox Canvas.Left="800" Canvas.Top="126" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="126" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding RedDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="162" Width="74" Height="32" Background="#2E9E2E">
                 <TextBlock Text="green" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <TextBox Canvas.Left="720" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
-            <TextBox Canvas.Left="800" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="800" Canvas.Top="162" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding GreenDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <!-- ===== Start / Stop ===== -->
             <Button Canvas.Left="626" Canvas.Top="204" Width="84" Height="32" Content="Start" Click="StartTimer_Click"/>
             <Button Canvas.Left="714" Canvas.Top="204" Width="84" Height="32" Content="Stop" Click="StopTimer_Click"/>
+
+            <!-- ===== Docking status and Undock feedback ===== -->
+            <TextBlock Canvas.Left="628" Canvas.Top="250" FontSize="15" FontWeight="Bold" Foreground="Red"
+                       Text="{Binding DockInfo}"/>
+            <TextBlock Canvas.Left="628" Canvas.Top="320" Width="250" TextWrapping="Wrap"
+                       FontSize="14" FontWeight="Bold" Foreground="#5A0000"
+                       Text="{Binding UndockMessage}"/>
 
             <!-- ===== Move / Step mode and Undock ===== -->
             <RadioButton Canvas.Left="655" Canvas.Top="455" GroupName="Mode" Content="Move" IsChecked="True"

@@ -9,20 +9,23 @@ public class ProductionLine
     private Rectangle box;
     private bool vertical;
     private Direction brickSide;
-    private List<LegoBrick> bricks = new List<LegoBrick>();
+    private bool beweglich;     // true = the bricks slide back and forth (production lines)
+    private LegoBrick?[] slots = new LegoBrick?[Parameters.bricksPerLine];
     private int brickWidth;
     private int brickHeight;
     private double shift;
     private int direction = 1;
     private double maxShift;
+    private LegoBrick? neuesBrick;
 
     // brickSide = the edge of the box where the bricks sit (left, right, up or down)
-    public ProductionLine(LegoColor color, Rectangle box, bool vertical, Direction brickSide)
+    public ProductionLine(LegoColor color, Rectangle box, bool vertical, Direction brickSide, bool beweglich)
     {
         this.color = color;
         this.box = box;
         this.vertical = vertical;
         this.brickSide = brickSide;
+        this.beweglich = beweglich;
 
         if (vertical)
         {
@@ -35,9 +38,13 @@ public class ProductionLine
             brickHeight = Parameters.brickShort;
         }
 
-        for (int i = 0; i < Parameters.bricksPerLine; i++)
+        // Production lines start with 4 bricks, the recycle line starts empty
+        if (beweglich)
         {
-            bricks.Add(new LegoBrick(color, LegoSize.large, brickWidth, brickHeight));
+            for (int i = 0; i < Parameters.bricksPerLine; i++)
+            {
+                slots[i] = new LegoBrick(color, LegoSize.large, brickWidth, brickHeight);
+            }
         }
 
         double boxLength = box.Width;
@@ -61,11 +68,6 @@ public class ProductionLine
         get { return box; }
     }
 
-    public List<LegoBrick> Bricks
-    {
-        get { return bricks; }
-    }
-
     public int BrickWidth
     {
         get { return brickWidth; }
@@ -76,30 +78,129 @@ public class ProductionLine
         get { return brickHeight; }
     }
 
+    // The bricks that are on this line at the moment
+    public List<LegoBrick> Bricks
+    {
+        get
+        {
+            List<LegoBrick> list = new List<LegoBrick>();
+            foreach (LegoBrick? brick in slots)
+            {
+                if (brick != null)
+                {
+                    list.Add(brick);
+                }
+            }
+            return list;
+        }
+    }
+
+    // The brick that ErsatzProduzieren made (null if there was no free place)
+    public LegoBrick? NeuesBrick
+    {
+        get { return neuesBrick; }
+    }
+
+    // True if at least one place on this line is free
+    public bool FreierPlatzVorhanden
+    {
+        get
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                LegoBrick? brick = slots[i];
+                if (brick == null || (brick.Status != BrickStatus.onLine && brick.Status != BrickStatus.repairing))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    // One tick: the bricks slide along the line and turn around at the ends
     public void Bewegen()
     {
-        shift += direction * Parameters.brickSpeed;
+        SlotsFreigeben();
 
-        if (shift > maxShift)
+        if (beweglich)
         {
-            shift = maxShift;
-            direction = -1;
-        }
-        if (shift < -maxShift)
-        {
-            shift = -maxShift;
-            direction = 1;
+            shift += direction * Parameters.brickSpeed;
+
+            if (shift > maxShift)
+            {
+                shift = maxShift;
+                direction = -1;
+            }
+            if (shift < -maxShift)
+            {
+                shift = -maxShift;
+                direction = 1;
+            }
         }
 
         UpdatePositions();
     }
 
+    // A brick was delivered to the customer: the line makes a new one in a free place
+    public void ErsatzProduzieren()
+    {
+        neuesBrick = null;
+        SlotsFreigeben();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null)
+            {
+                neuesBrick = new LegoBrick(color, LegoSize.large, brickWidth, brickHeight);
+                slots[i] = neuesBrick;
+                break;
+            }
+        }
+
+        UpdatePositions();
+    }
+
+    // Puts a brick (that comes from the delivery line) into the first free place
+    public void PlatzBelegen(LegoBrick brick)
+    {
+        SlotsFreigeben();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null)
+            {
+                slots[i] = brick;
+                break;
+            }
+        }
+
+        UpdatePositions();
+    }
+
+    // A place is free again when its brick was taken away by the robot
+    private void SlotsFreigeben()
+    {
+        for (int i = 0; i < slots.Length; i++)
+        {
+            LegoBrick? brick = slots[i];
+            if (brick != null && brick.Status != BrickStatus.onLine && brick.Status != BrickStatus.repairing)
+            {
+                slots[i] = null;
+            }
+        }
+    }
+
     private void UpdatePositions()
     {
-        for (int i = 0; i < bricks.Count; i++)
+        for (int i = 0; i < slots.Length; i++)
         {
-            // A brick that was grabbed by the robot is no longer moved by the line
-            if (!bricks[i].AufLinie)
+            LegoBrick? brick = slots[i];
+            if (brick == null)
+            {
+                continue;
+            }
+            if (brick.Status != BrickStatus.onLine && brick.Status != BrickStatus.repairing)
             {
                 continue;
             }
@@ -127,7 +228,7 @@ public class ProductionLine
                 centerX = box.Left + box.Width / 2.0 + along;
             }
 
-            bricks[i].SetzePose(centerX, centerY, 0);
+            brick.SetzePose(centerX, centerY, 0);
         }
     }
 }

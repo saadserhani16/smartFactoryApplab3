@@ -17,6 +17,11 @@ public class LegoBrickViewModel : ViewModelBase
         if (brick.Color == LegoColor.yellow) fill = new SolidColorBrush(Color.Parse("#F5DC1E"));
     }
 
+    public LegoBrick Brick
+    {
+        get { return brick; }
+    }
+
     // Canvas wants the top-left corner, the brick stores its center
     public double X
     {
@@ -48,10 +53,28 @@ public class LegoBrickViewModel : ViewModelBase
         get { return fill; }
     }
 
+    // Defective bricks (and bricks that are being repaired) are drawn half transparent
+    public double BrickOpacity
+    {
+        get
+        {
+            if (brick.Status == BrickStatus.toRecycle || brick.Status == BrickStatus.repairing)
+            {
+                return 0.5;
+            }
+            if (brick.Status == BrickStatus.onDeliveryLine && !brick.QualitaetGut)
+            {
+                return 0.5;
+            }
+            return 1.0;
+        }
+    }
+
     public void Refresh()
     {
         OnPropertyChanged(nameof(X));
         OnPropertyChanged(nameof(Y));
         OnPropertyChanged(nameof(Angle));
+        OnPropertyChanged(nameof(BrickOpacity));
     }
 }

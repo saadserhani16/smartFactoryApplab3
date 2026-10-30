@@ -17,7 +17,6 @@ public class Beweger
 
     // Docking
     private LegoBrick? dockobjekt;
-    private LegoBrick? abgelegtesObjekt;   // last dropped brick (cannot be grabbed again right away)
     private double dockWinkelOffset;
     private double greifpunktX;            // TCP = middle of the upper edge
     private double greifpunktY;
@@ -139,19 +138,11 @@ public class Beweger
 
     // ---------- Docking ----------
 
-    // Called after every movement: grabs a brick if the TCP is close enough
+    // Called after every movement: grabs a brick if the TCP is close enough.
+    // Only bricks that wait on a production line or the recycle line can be grabbed,
+    // never bricks that are on the delivery line.
     public void DockingPruefen(List<LegoBrick> bricks)
     {
-        // The dropped brick can be grabbed again once the TCP has left its area
-        if (abgelegtesObjekt != null)
-        {
-            BerechneAbstand(abgelegtesObjekt);
-            if (abstand > Parameters.dockDistance)
-            {
-                abgelegtesObjekt = null;
-            }
-        }
-
         if (dockobjekt != null)
         {
             return;
@@ -159,7 +150,7 @@ public class Beweger
 
         foreach (LegoBrick brick in bricks)
         {
-            if (brick == abgelegtesObjekt)
+            if (brick.Status != BrickStatus.onLine)
             {
                 continue;
             }
@@ -181,14 +172,10 @@ public class Beweger
         DockobjektNachziehen();
     }
 
+    // The robot lets go of the brick (the Factory decides what happens to the brick)
     public void Undock()
     {
-        if (dockobjekt != null)
-        {
-            dockobjekt.Undock();
-            abgelegtesObjekt = dockobjekt;
-            dockobjekt = null;
-        }
+        dockobjekt = null;
     }
 
     // ---------- Private helpers ----------

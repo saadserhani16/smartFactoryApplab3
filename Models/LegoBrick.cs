@@ -1,3 +1,6 @@
+using System;
+using System.Drawing;
+
 namespace smartFactoryApp;
 
 public class LegoBrick
@@ -9,8 +12,10 @@ public class LegoBrick
     private double angle;
     private int width;
     private int height;
-    private bool gedockt;
-    private bool aufLinie;   // true = still moved by its production line
+    private BrickStatus status;
+    private bool qualitaetGut;
+    private int wartezeit;
+    private bool aufDeliveryLinie;
 
     public LegoBrick(LegoColor color, LegoSize size, int width, int height)
     {
@@ -18,8 +23,8 @@ public class LegoBrick
         this.size = size;
         this.width = width;
         this.height = height;
-        this.gedockt = false;
-        this.aufLinie = true;
+        this.status = BrickStatus.onLine;
+        this.qualitaetGut = true;
     }
 
     public LegoColor Color
@@ -57,14 +62,20 @@ public class LegoBrick
         get { return height; }
     }
 
-    public bool Gedockt
+    public BrickStatus Status
     {
-        get { return gedockt; }
+        get { return status; }
     }
 
-    public bool AufLinie
+    public bool QualitaetGut
     {
-        get { return aufLinie; }
+        get { return qualitaetGut; }
+    }
+
+    // Result of PruefeDeliveryLinie
+    public bool AufDeliveryLinie
+    {
+        get { return aufDeliveryLinie; }
     }
 
     public void SetzePose(double newX, double newY, double newAngle)
@@ -74,14 +85,73 @@ public class LegoBrick
         angle = ((newAngle % 360) + 360) % 360;
     }
 
+    // The robot grabs the brick
     public void Dock()
     {
-        gedockt = true;
-        aufLinie = false;   // once grabbed, the line never moves it again
+        status = BrickStatus.docked;
     }
 
-    public void Undock()
+    // The robot puts the brick on the delivery line. The quality is decided now.
+    public void Lieferung(bool gut, double newX, double newY)
     {
-        gedockt = false;
+        status = BrickStatus.onDeliveryLine;
+        qualitaetGut = gut;
+        wartezeit = Parameters.deliveryWaitTicks;
+        SetzePose(newX, newY, 0);
+    }
+
+    // Waiting on the delivery line, or being repaired
+    public void Warten()
+    {
+        wartezeit--;
+        if (wartezeit > 0)
+        {
+            return;
+        }
+
+        if (status == BrickStatus.onDeliveryLine)
+        {
+            if (qualitaetGut)
+                status = BrickStatus.toCustomer;
+            else
+                status = BrickStatus.toRecycle;
+        }
+        else if (status == BrickStatus.repairing)
+        {
+            status = BrickStatus.onLine;
+            qualitaetGut = true;
+        }
+    }
+
+    // One step to the right (to the customers)
+    public void ZumKunden()
+    {
+        SetzePose(x + Parameters.deliverySpeed, y, 0);
+    }
+
+    // One step to the left (to the recycling)
+    public void ZumRecycling()
+    {
+        SetzePose(x - Parameters.deliverySpeed, y, 0);
+    }
+
+    // The brick arrived on the recycle line
+    public void Reparatur()
+    {
+        status = BrickStatus.repairing;
+        wartezeit = Parameters.repairTicks;
+    }
+
+    // Sets AufDeliveryLinie: true if the brick touches the delivery line
+    public void PruefeDeliveryLinie(Rectangle line)
+    {
+        double radians = angle * Math.PI / 180.0;
+        double c = Math.Abs(Math.Cos(radians));
+        double s = Math.Abs(Math.Sin(radians));
+        double halfW = c * width / 2.0 + s * height / 2.0;
+        double halfH = s * width / 2.0 + c * height / 2.0;
+
+        aufDeliveryLinie = x + halfW > line.Left && x - halfW < line.Right &&
+                           y + halfH > line.Top && y - halfH < line.Bottom;
     }
 }

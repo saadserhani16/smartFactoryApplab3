@@ -11,6 +11,7 @@ public class MainViewModel : ViewModelBase
     private DispatcherTimer robotTimer;
     private bool continuousMode = true;
     private bool running = false;   // false until the Start button is pressed
+    private string undockMessage = "";
 
     private ObservableCollection<LegoBrickViewModel> allBricks = new ObservableCollection<LegoBrickViewModel>();
 
@@ -18,10 +19,7 @@ public class MainViewModel : ViewModelBase
     {
         factory = new Factory();
 
-        foreach (LegoBrick brick in factory.AllBricks)
-        {
-            allBricks.Add(new LegoBrickViewModel(brick));
-        }
+        SyncBricks();
 
         brickTimer = new DispatcherTimer();
         brickTimer.Interval = TimeSpan.FromMilliseconds(Parameters.brickTimerInterval);
@@ -64,7 +62,7 @@ public class MainViewModel : ViewModelBase
         get { return factory.Robot.Angle; }
     }
 
- public double GripperX
+    public double GripperX
     {
         get { return factory.Robot.GreifpunktX - 3; }
     }
@@ -72,6 +70,16 @@ public class MainViewModel : ViewModelBase
     public double GripperY
     {
         get { return factory.Robot.GreifpunktY - 3; }
+    }
+
+    public string RobotInfo
+    {
+        get
+        {
+            return "X: " + factory.Robot.X.ToString("F1") + Environment.NewLine +
+                   "Y: " + factory.Robot.Y.ToString("F1") + Environment.NewLine +
+                   "Angle: " + factory.Robot.Angle.ToString("F1") + "°";
+        }
     }
 
     public string DockInfo
@@ -88,14 +96,31 @@ public class MainViewModel : ViewModelBase
                    "Holding: " + holding;
         }
     }
-    public string RobotInfo
+
+    // Feedback of the Undock button
+    public string UndockMessage
     {
-        get
-        {
-            return "X: " + factory.Robot.X.ToString("F1") + Environment.NewLine +
-                   "Y: " + factory.Robot.Y.ToString("F1") + Environment.NewLine +
-                   "Angle: " + factory.Robot.Angle.ToString("F1") + "°";
-        }
+        get { return undockMessage; }
+    }
+
+    public string YellowDelivered
+    {
+        get { return factory.YellowDelivered.ToString(); }
+    }
+
+    public string BlueDelivered
+    {
+        get { return factory.BlueDelivered.ToString(); }
+    }
+
+    public string RedDelivered
+    {
+        get { return factory.RedDelivered.ToString(); }
+    }
+
+    public string GreenDelivered
+    {
+        get { return factory.GreenDelivered.ToString(); }
     }
 
     // ---------- Start / Stop ----------
@@ -196,9 +221,36 @@ public class MainViewModel : ViewModelBase
         continuousMode = false;
     }
 
+    // The Undock button: the robot can only let go of a brick on the delivery line
     public void Undock()
     {
+        if (!running)
+        {
+            undockMessage = "Press Start first.";
+            OnPropertyChanged(nameof(UndockMessage));
+            return;
+        }
+
         factory.RobotUndock();
+
+        if (factory.UndockErgebnis == UndockResult.noBrick)
+        {
+            undockMessage = "No brick available to undock.";
+        }
+        else if (factory.UndockErgebnis == UndockResult.notOnDeliveryLine)
+        {
+            undockMessage = "Undocking failed: only possible on the delivery line.";
+        }
+        else if (factory.LetzteQualitaetGut)
+        {
+            undockMessage = "Undocking successful: brick is OK and goes to the customer.";
+        }
+        else
+        {
+            undockMessage = "Undocking successful: brick is defective and goes to recycling.";
+        }
+
+        OnPropertyChanged(nameof(UndockMessage));
         NotifyRobotPositionChanged();
     }
 
@@ -251,7 +303,39 @@ public class MainViewModel : ViewModelBase
     private void BrickTimer_Tick(object? sender, EventArgs e)
     {
         factory.LegoBricksBewegen();
+        SyncBricks();
         NotifyBricksChanged();
+        NotifyDeliveredChanged();
+        OnPropertyChanged(nameof(DockInfo));
+    }
+
+    // Creates a view model for every new brick and removes the ones of bricks that are gone
+    private void SyncBricks()
+    {
+        foreach (LegoBrick brick in factory.AllBricks)
+        {
+            bool found = false;
+            foreach (LegoBrickViewModel brickViewModel in allBricks)
+            {
+                if (brickViewModel.Brick == brick)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                allBricks.Add(new LegoBrickViewModel(brick));
+            }
+        }
+
+        for (int i = allBricks.Count - 1; i >= 0; i--)
+        {
+            if (!factory.AllBricks.Contains(allBricks[i].Brick))
+            {
+                allBricks.RemoveAt(i);
+            }
+        }
     }
 
     private void NotifyBricksChanged()
@@ -260,6 +344,14 @@ public class MainViewModel : ViewModelBase
         {
             brickViewModel.Refresh();
         }
+    }
+
+    private void NotifyDeliveredChanged()
+    {
+        OnPropertyChanged(nameof(YellowDelivered));
+        OnPropertyChanged(nameof(BlueDelivered));
+        OnPropertyChanged(nameof(RedDelivered));
+        OnPropertyChanged(nameof(GreenDelivered));
     }
 
     private void NotifyRobotPositionChanged()
@@ -273,4 +365,4 @@ public class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(DockInfo));
         NotifyBricksChanged();   // a docked brick moves with the robot
     }
-    }
+}
