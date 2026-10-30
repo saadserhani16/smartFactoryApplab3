@@ -15,6 +15,14 @@ public class Beweger
     private List<Rectangle> obstacles;
     private bool kontakt;
 
+    // Docking
+    private LegoBrick? dockobjekt;
+    private LegoBrick? abgelegtesObjekt;   // last dropped brick (cannot be grabbed again right away)
+    private double dockWinkelOffset;
+    private double greifpunktX;            // TCP = middle of the upper edge
+    private double greifpunktY;
+    private double abstand;
+
     public Beweger(double startX, double startY, int width, int height, Rectangle borders, List<Rectangle> obstacles)
     {
         this.x = startX;
@@ -25,6 +33,7 @@ public class Beweger
         this.obstacles = obstacles;
         this.angle = 0;
         this.kontakt = false;
+        BerechneGreifpunkt();
     }
 
     public double X
@@ -47,35 +56,67 @@ public class Beweger
         get { return borders; }
     }
 
-    // True if the last attempted move was blocked
     public bool Kontakt
     {
         get { return kontakt; }
     }
+
+    public double GreifpunktX
+    {
+        get { return greifpunktX; }
+    }
+
+    public double GreifpunktY
+    {
+        get { return greifpunktY; }
+    }
+
+    public LegoBrick? Dockobjekt
+    {
+        get { return dockobjekt; }
+    }
+
+    // ---------- Movement ----------
 
     public void Bewegen(Direction direction)
     {
         Bewegen(direction, Parameters.step);
     }
 
+    // The direction is relative to the robot: "up" = forward in the direction the robot faces
     public void Bewegen(Direction direction, int stepSize)
     {
-        double dx = 0;
-        double dy = 0;
+        double localX = 0;
+        double localY = 0;
 
         if (direction == Direction.left || direction == Direction.upLeft || direction == Direction.downLeft)
-            dx = -stepSize;
+            localX -= 1;
         if (direction == Direction.right || direction == Direction.upRight || direction == Direction.downRight)
-            dx = stepSize;
+            localX += 1;
         if (direction == Direction.up || direction == Direction.upLeft || direction == Direction.upRight)
-            dy = -stepSize;
+            localY -= 1;
         if (direction == Direction.down || direction == Direction.downLeft || direction == Direction.downRight)
-            dy = stepSize;
+            localY += 1;
+
+        if (localX == 0 && localY == 0)
+        {
+            return;
+        }
+
+        // Same speed for straight and diagonal moves
+        double length = Math.Sqrt(localX * localX + localY * localY);
+        localX = localX / length * stepSize;
+        localY = localY / length * stepSize;
+
+        // Turn the local movement by the robot's angle into a movement on the floor
+        double radians = angle * Math.PI / 180.0;
+        double dx = localX * Math.Cos(radians) - localY * Math.Sin(radians);
+        double dy = localX * Math.Sin(radians) + localY * Math.Cos(radians);
 
         VersucheZuSetzen(x + dx, y + dy, angle);
 
-        // Diagonal move blocked: try to slide along the obstacle
-        if (kontakt && dx != 0 && dy != 0)
+        // Blocked: try to slide along the wall or the production line
+        if (kontakt)
         {
             VersucheZuSetzen(x + dx, y, angle);
             if (kontakt)
@@ -96,6 +137,62 @@ public class Beweger
         VersucheZuSetzen(x, y, 0);
     }
 
+    // ---------- Docking ----------
+
+    // Called after every movement: grabs a brick if the TCP is close enough
+    public void DockingPruefen(List<LegoBrick> bricks)
+    {
+        // The dropped brick can be grabbed again once the TCP has left its area
+        if (abgelegtesObjekt != null)
+        {
+            BerechneAbstand(abgelegtesObjekt);
+            if (abstand > Parameters.dockDistance)
+            {
+                abgelegtesObjekt = null;
+            }
+        }
+
+        if (dockobjekt != null)
+        {
+            return;
+        }
+
+        foreach (LegoBrick brick in bricks)
+        {
+            if (brick == abgelegtesObjekt)
+            {
+                continue;
+            }
+
+            BerechneAbstand(brick);
+            if (abstand <= Parameters.dockDistance)
+            {
+                Dock(brick);
+                return;
+            }
+        }
+    }
+
+    public void Dock(LegoBrick brick)
+    {
+        dockobjekt = brick;
+        dockWinkelOffset = brick.Angle - angle;
+        brick.Dock();
+        DockobjektNachziehen();
+    }
+
+    public void Undock()
+    {
+        if (dockobjekt != null)
+        {
+            dockobjekt.Undock();
+            abgelegtesObjekt = dockobjekt;
+            dockobjekt = null;
+        }
+    }
+
+    // ---------- Private helpers ----------
+
     // Applies the new pose only if there is no collision
     private void VersucheZuSetzen(double newX, double newY, double newAngle)
     {
@@ -105,11 +202,43 @@ public class Beweger
             x = newX;
             y = newY;
             angle = newAngle;
+            BerechneGreifpunkt();
+            DockobjektNachziehen();
         }
     }
 
-    // Sets the variable kontakt to true if the robot at this pose
-    // leaves the factory or touches one of the production lines
+    // TCP = middle of the upper edge of the robot, also when it is rotated
+    private void BerechneGreifpunkt()
+    {
+        double radians = angle * Math.PI / 180.0;
+        greifpunktX = x + width / 2.0 + (height / 2.0) * Math.Sin(radians);
+        greifpunktY = y + height / 2.0 - (height / 2.0) * Math.Cos(radians);
+    }
+
+    // The docked brick sits on the TCP and turns with the robot
+    private void DockobjektNachziehen()
+    {
+        if (dockobjekt != null)
+        {
+            dockobjekt.SetzePose(greifpunktX, greifpunktY, angle + dockWinkelOffset);
+        }
+    }
+
+    // Distance from the TCP to the (possibly rotated) rectangle of a brick
+    private void BerechneAbstand(LegoBrick brick)
+    {
+        double radians = -brick.Angle * Math.PI / 180.0;
+        double dx = greifpunktX - brick.X;
+        double dy = greifpunktY - brick.Y;
+        double localX = dx * Math.Cos(radians) - dy * Math.Sin(radians);
+        double localY = dx * Math.Sin(radians) + dy * Math.Cos(radians);
+        double outsideX = Math.Max(Math.Abs(localX) - brick.Width / 2.0, 0);
+        double outsideY = Math.Max(Math.Abs(localY) - brick.Height / 2.0, 0);
+        abstand = Math.Sqrt(outsideX * outsideX + outsideY * outsideY);
+    }
+
+    // Sets kontakt to true if the robot at this pose (or its docked brick)
+    // leaves the factory, or if the robot touches one of the production lines
     private void PruefeKollision(double testX, double testY, double testAngle)
     {
         double radians = testAngle * Math.PI / 180.0;
@@ -144,7 +273,25 @@ public class Beweger
             kontakt = true;
         }
 
-        // 2. Production lines
+        // 2. The docked brick must stay inside the factory, too
+        if (dockobjekt != null)
+        {
+            double tcpX = centerX + (height / 2.0) * sin;
+            double tcpY = centerY - (height / 2.0) * cos;
+            double brickRadians = (testAngle + dockWinkelOffset) * Math.PI / 180.0;
+            double bc = Math.Abs(Math.Cos(brickRadians));
+            double bs = Math.Abs(Math.Sin(brickRadians));
+            double halfW = bc * dockobjekt.Width / 2.0 + bs * dockobjekt.Height / 2.0;
+            double halfH = bs * dockobjekt.Width / 2.0 + bc * dockobjekt.Height / 2.0;
+
+            if (tcpX - halfW < borders.Left || tcpX + halfW > borders.Right ||
+                tcpY - halfH < borders.Top || tcpY + halfH > borders.Bottom)
+            {
+                kontakt = true;
+            }
+        }
+
+        // 3. Production lines (only the robot itself, not the docked brick)
         double[] axisX = { cos, -sin };
         double[] axisY = { sin, cos };
         double[] radius = { width / 2.0, height / 2.0 };

@@ -5,19 +5,11 @@ namespace smartFactoryApp.ViewModels;
 public class LegoBrickViewModel : ViewModelBase
 {
     private LegoBrick brick;
-    private double centerX;
-    private double centerY;
-    private double brickWidth;
-    private double brickHeight;
     private IBrush fill = Brushes.Gray;
 
-    public LegoBrickViewModel(LegoBrick brick, double centerX, double centerY, double brickWidth, double brickHeight)
+    public LegoBrickViewModel(LegoBrick brick)
     {
         this.brick = brick;
-        this.centerX = centerX;
-        this.centerY = centerY;
-        this.brickWidth = brickWidth;
-        this.brickHeight = brickHeight;
 
         if (brick.Color == LegoColor.red) fill = new SolidColorBrush(Color.Parse("#A5142C"));
         if (brick.Color == LegoColor.green) fill = new SolidColorBrush(Color.Parse("#2E9E2E"));
@@ -25,24 +17,30 @@ public class LegoBrickViewModel : ViewModelBase
         if (brick.Color == LegoColor.yellow) fill = new SolidColorBrush(Color.Parse("#F5DC1E"));
     }
 
+    // Canvas wants the top-left corner, the brick stores its center
     public double X
     {
-        get { return centerX - brickWidth / 2; }
+        get { return brick.X - brick.Width / 2.0; }
     }
 
     public double Y
     {
-        get { return centerY - brickHeight / 2; }
+        get { return brick.Y - brick.Height / 2.0; }
+    }
+
+    public double Angle
+    {
+        get { return brick.Angle; }
     }
 
     public double BrickWidth
     {
-        get { return brickWidth; }
+        get { return brick.Width; }
     }
 
     public double BrickHeight
     {
-        get { return brickHeight; }
+        get { return brick.Height; }
     }
 
     public IBrush Fill
@@ -50,11 +48,10 @@ public class LegoBrickViewModel : ViewModelBase
         get { return fill; }
     }
 
-    public void Refresh(double newCenterX, double newCenterY)
+    public void Refresh()
     {
-        centerX = newCenterX;
-        centerY = newCenterY;
         OnPropertyChanged(nameof(X));
         OnPropertyChanged(nameof(Y));
+        OnPropertyChanged(nameof(Angle));
     }
 }

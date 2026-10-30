@@ -53,14 +53,14 @@
                     </Border>
                 </Grid>
 
-                <!-- Red line (left, vertical) -->
+                <!-- Red line (left, vertical, image rotated by 90 degrees) -->
                 <Rectangle Canvas.Left="73" Canvas.Top="94" Width="60" Height="160" Fill="White"/>
-<Image Source="avares://smartFactoryApp/Assets/production_red_2.png" Stretch="Fill"
-       Width="160" Height="60" Canvas.Left="23" Canvas.Top="144">
-    <Image.RenderTransform>
-        <RotateTransform Angle="90"/>
-    </Image.RenderTransform>
-</Image>
+                <Image Source="avares://smartFactoryApp/Assets/production_red_2.png" Stretch="Fill"
+                       Width="160" Height="60" Canvas.Left="23" Canvas.Top="144">
+                    <Image.RenderTransform>
+                        <RotateTransform Angle="90"/>
+                    </Image.RenderTransform>
+                </Image>
 
                 <!-- Blue line (right, vertical) -->
                 <Rectangle Canvas.Left="393" Canvas.Top="94" Width="60" Height="160" Fill="White"/>
@@ -90,8 +90,23 @@
                         Background="#2E9E2E" BorderBrush="Black" BorderThickness="2"/>
             </Canvas>
 
-            <!-- ===== The moving bricks (absolute coordinates) ===== -->
-            <ItemsControl ItemsSource="{Binding AllBricks}">
+            <!-- ===== X / Y / Angle display ===== -->
+            <TextBlock Canvas.Left="50" Canvas.Top="48" FontSize="18" Foreground="Red"
+                       Text="{Binding RobotInfo}"/>
+
+            <!-- ===== The robot (image, 30x65, gripper = top middle) ===== -->
+            <Rectangle Width="30" Height="65"
+                       Canvas.Left="{Binding RobotX}" Canvas.Top="{Binding RobotY}">
+                <Rectangle.Fill>
+                    <ImageBrush Source="avares://smartFactoryApp/Assets/robot_2.png" Stretch="Fill"/>
+                </Rectangle.Fill>
+                <Rectangle.RenderTransform>
+                    <RotateTransform Angle="{Binding RobotAngle}"/>
+                </Rectangle.RenderTransform>
+            </Rectangle>
+
+            <!-- ===== The bricks (drawn above the robot, so a docked brick is visible) ===== -->
+            <ItemsControl ItemsSource="{Binding AllBricks}" Width="900" Height="600" IsHitTestVisible="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas/>
@@ -106,25 +121,21 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:LegoBrickViewModel">
                         <Rectangle Width="{Binding BrickWidth}" Height="{Binding BrickHeight}"
-                                   Fill="{Binding Fill}"/>
+                                   Fill="{Binding Fill}" Stroke="Black" StrokeThickness="1">
+                            <Rectangle.RenderTransform>
+                                <RotateTransform Angle="{Binding Angle}"/>
+                            </Rectangle.RenderTransform>
+                        </Rectangle>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+             <!-- Gripper marker (the point that grabs the bricks) -->
+            <Ellipse Width="6" Height="6" Fill="Magenta"
+                     Canvas.Left="{Binding GripperX}" Canvas.Top="{Binding GripperY}"/>
 
-            <!-- ===== X / Y / Angle display ===== -->
-            <TextBlock Canvas.Left="50" Canvas.Top="48" FontSize="18" Foreground="Red"
-                       Text="{Binding RobotInfo}"/>
-
-            <!-- ===== The robot (30x65, red dot = TCP at the top middle) ===== -->
-            <Rectangle Width="30" Height="65"
-           Canvas.Left="{Binding RobotX}" Canvas.Top="{Binding RobotY}">
-    <Rectangle.Fill>
-        <ImageBrush Source="avares://smartFactoryApp/Assets/robot_2.png" Stretch="Fill"/>
-    </Rectangle.Fill>
-    <Rectangle.RenderTransform>
-        <RotateTransform Angle="{Binding RobotAngle}"/>
-    </Rectangle.RenderTransform>
-</Rectangle>
+            <!-- Docking status -->
+            <TextBlock Canvas.Left="628" Canvas.Top="260" FontSize="16" FontWeight="Bold" Foreground="Red"
+                       Text="{Binding DockInfo}"/>
 
             <!-- ===== Order panel (display only for now) ===== -->
             <TextBlock Canvas.Left="628" Canvas.Top="14" Text="Order" FontSize="22" FontWeight="Bold" Foreground="Black"/>
@@ -154,7 +165,7 @@
             <TextBox Canvas.Left="720" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
             <TextBox Canvas.Left="800" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
 
-            <!-- ===== Start / Stop (bricks) ===== -->
+            <!-- ===== Start / Stop ===== -->
             <Button Canvas.Left="626" Canvas.Top="204" Width="84" Height="32" Content="Start" Click="StartTimer_Click"/>
             <Button Canvas.Left="714" Canvas.Top="204" Width="84" Height="32" Content="Stop" Click="StopTimer_Click"/>
 
@@ -163,7 +174,7 @@
                          Foreground="Black" Click="MoveMode_Click"/>
             <RadioButton Canvas.Left="655" Canvas.Top="491" GroupName="Mode" Content="Step"
                          Foreground="Black" Click="StepMode_Click"/>
-            <Button Canvas.Left="660" Canvas.Top="528" Width="76" Height="32" Content="Undock"/>
+            <Button Canvas.Left="660" Canvas.Top="528" Width="76" Height="32" Content="Undock" Click="Undock_Click"/>
 
             <!-- ===== Direction and rotation buttons ===== -->
             <Grid Canvas.Left="745" Canvas.Top="430" Width="134" Height="166"

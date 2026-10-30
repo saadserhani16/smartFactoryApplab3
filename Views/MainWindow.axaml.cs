@@ -95,4 +95,9 @@ public partial class MainWindow : Window
     {
         ViewModel.StopTimer();
     }
+
+    private void Undock_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.Undock();
+    }
 }

@@ -11,6 +11,7 @@ public class Factory
     private ProductionLine productionBlue;
     private ProductionLine productionYellow;
     private List<Rectangle> productionLines = new List<Rectangle>();
+    private List<LegoBrick> allBricks = new List<LegoBrick>();
 
     public Factory()
     {
@@ -29,6 +30,11 @@ public class Factory
         productionBlue = new ProductionLine(LegoColor.blue, ViewParameters.RectBlue, true, Direction.left);
         productionYellow = new ProductionLine(LegoColor.yellow, ViewParameters.RectYellow, false, Direction.up);
         productionGreen = new ProductionLine(LegoColor.green, ViewParameters.RectGreen, false, Direction.up);
+
+        CollectBricks(productionRed);
+        CollectBricks(productionGreen);
+        CollectBricks(productionBlue);
+        CollectBricks(productionYellow);
     }
 
     public Robot Robot
@@ -56,19 +62,27 @@ public class Factory
         get { return productionYellow; }
     }
 
+    public List<LegoBrick> AllBricks
+    {
+        get { return allBricks; }
+    }
+
     public void RobotBewegen(Direction direction)
     {
         robot.Bewegen(direction);
+        robot.DockingPruefen(allBricks);
     }
 
     public void RobotDrehen(int degrees)
     {
         robot.Drehen(degrees);
+        robot.DockingPruefen(allBricks);
     }
 
     public void RobotResetRotation()
     {
         robot.ResetRotation();
+        robot.DockingPruefen(allBricks);
     }
 
     public void RobotRichtung(Direction direction)
@@ -89,6 +103,12 @@ public class Factory
     public void RobotWeiterBewegen()
     {
         robot.WeiterBewegen();
+        robot.DockingPruefen(allBricks);
+    }
+
+    public void RobotUndock()
+    {
+        robot.Undock();
     }
 
     public void LegoBricksBewegen()
@@ -97,5 +117,14 @@ public class Factory
         productionGreen.Bewegen();
         productionBlue.Bewegen();
         productionYellow.Bewegen();
+        robot.DockingPruefen(allBricks);
+    }
+
+    private void CollectBricks(ProductionLine line)
+    {
+        foreach (LegoBrick brick in line.Bricks)
+        {
+            allBricks.Add(brick);
+        }
     }
 }

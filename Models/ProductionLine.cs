@@ -10,8 +10,6 @@ public class ProductionLine
     private bool vertical;
     private Direction brickSide;
     private List<LegoBrick> bricks = new List<LegoBrick>();
-    private double[] brickX = new double[Parameters.bricksPerLine];
-    private double[] brickY = new double[Parameters.bricksPerLine];
     private int brickWidth;
     private int brickHeight;
     private double shift;
@@ -39,7 +37,7 @@ public class ProductionLine
 
         for (int i = 0; i < Parameters.bricksPerLine; i++)
         {
-            bricks.Add(new LegoBrick(color, LegoSize.large));
+            bricks.Add(new LegoBrick(color, LegoSize.large, brickWidth, brickHeight));
         }
 
         double boxLength = box.Width;
@@ -66,16 +64,6 @@ public class ProductionLine
     public List<LegoBrick> Bricks
     {
         get { return bricks; }
-    }
-
-    public double[] BrickX
-    {
-        get { return brickX; }
-    }
-
-    public double[] BrickY
-    {
-        get { return brickY; }
     }
 
     public int BrickWidth
@@ -108,28 +96,38 @@ public class ProductionLine
 
     private void UpdatePositions()
     {
-        for (int i = 0; i < Parameters.bricksPerLine; i++)
+        for (int i = 0; i < bricks.Count; i++)
         {
+            // A brick that was grabbed by the robot is no longer moved by the line
+            if (!bricks[i].AufLinie)
+            {
+                continue;
+            }
+
             double along = shift + (i - (Parameters.bricksPerLine - 1) / 2.0) * Parameters.brickSpacing;
+            double centerX;
+            double centerY;
 
             if (vertical)
             {
                 if (brickSide == Direction.left)
-                    brickX[i] = box.Left + brickWidth / 2.0;
+                    centerX = box.Left + brickWidth / 2.0;
                 else
-                    brickX[i] = box.Right - brickWidth / 2.0;
+                    centerX = box.Right - brickWidth / 2.0;
 
-                brickY[i] = box.Top + box.Height / 2.0 + along;
+                centerY = box.Top + box.Height / 2.0 + along;
             }
             else
             {
                 if (brickSide == Direction.down)
-                    brickY[i] = box.Bottom - brickHeight / 2.0;
+                    centerY = box.Bottom - brickHeight / 2.0;
                 else
-                    brickY[i] = box.Top + brickHeight / 2.0;
+                    centerY = box.Top + brickHeight / 2.0;
 
-                brickX[i] = box.Left + box.Width / 2.0 + along;
+                centerX = box.Left + box.Width / 2.0 + along;
             }
+
+            bricks[i].SetzePose(centerX, centerY, 0);
         }
     }
 }

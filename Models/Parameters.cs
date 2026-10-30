@@ -30,7 +30,7 @@ public enum LegoSize
 public class Parameters
 {
     public const int step = 10;               // pixels per click in Step mode
-    public const int rotationStep = 5;       // degrees per click in Step mode
+    public const int rotationStep = 15;       // degrees per click in Step mode
     public const int continuousStep = 4;      // pixels per tick in Move mode
     public const int continuousRotation = 2;  // degrees per tick in Move mode
     public const int robotTimerInterval = 20; // ms
@@ -44,4 +44,6 @@ public class Parameters
 
     public const int robotWidth = 30;
     public const int robotHeight = 65;
+
+    public const int dockDistance = 10;       // gripper must be this close (pixels) to grab a brick
 }

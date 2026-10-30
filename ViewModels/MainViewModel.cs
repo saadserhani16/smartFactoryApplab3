@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 
@@ -11,21 +10,18 @@ public class MainViewModel : ViewModelBase
     private DispatcherTimer brickTimer;
     private DispatcherTimer robotTimer;
     private bool continuousMode = true;
+    private bool running = false;   // false until the Start button is pressed
 
     private ObservableCollection<LegoBrickViewModel> allBricks = new ObservableCollection<LegoBrickViewModel>();
-    private List<LegoBrickViewModel> redBricks = new List<LegoBrickViewModel>();
-    private List<LegoBrickViewModel> greenBricks = new List<LegoBrickViewModel>();
-    private List<LegoBrickViewModel> blueBricks = new List<LegoBrickViewModel>();
-    private List<LegoBrickViewModel> yellowBricks = new List<LegoBrickViewModel>();
 
     public MainViewModel()
     {
         factory = new Factory();
 
-        CreateBrickViewModels(redBricks, factory.ProductionRed);
-        CreateBrickViewModels(greenBricks, factory.ProductionGreen);
-        CreateBrickViewModels(blueBricks, factory.ProductionBlue);
-        CreateBrickViewModels(yellowBricks, factory.ProductionYellow);
+        foreach (LegoBrick brick in factory.AllBricks)
+        {
+            allBricks.Add(new LegoBrickViewModel(brick));
+        }
 
         brickTimer = new DispatcherTimer();
         brickTimer.Interval = TimeSpan.FromMilliseconds(Parameters.brickTimerInterval);
@@ -68,6 +64,30 @@ public class MainViewModel : ViewModelBase
         get { return factory.Robot.Angle; }
     }
 
+ public double GripperX
+    {
+        get { return factory.Robot.GreifpunktX - 3; }
+    }
+
+    public double GripperY
+    {
+        get { return factory.Robot.GreifpunktY - 3; }
+    }
+
+    public string DockInfo
+    {
+        get
+        {
+            string holding = "nothing";
+            if (factory.Robot.Dockobjekt != null)
+            {
+                holding = factory.Robot.Dockobjekt.Color.ToString();
+            }
+            return "Gripper: " + factory.Robot.GreifpunktX.ToString("F0") + ", " +
+                   factory.Robot.GreifpunktY.ToString("F0") + Environment.NewLine +
+                   "Holding: " + holding;
+        }
+    }
     public string RobotInfo
     {
         get
@@ -78,7 +98,24 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    // ---------- Robot buttons ----------
+    // ---------- Start / Stop ----------
+
+    // Start: bricks move and the robot can be controlled
+    public void StartTimer()
+    {
+        running = true;
+        brickTimer.Start();
+    }
+
+    // Stop: everything stops, and the robot stays locked until Start is pressed again
+    public void StopTimer()
+    {
+        running = false;
+        brickTimer.Stop();
+        StopRobot();
+    }
+
+    // ---------- Robot buttons (all directions are relative to the robot) ----------
 
     public void MoveUp()
     {
@@ -132,11 +169,16 @@ public class MainViewModel : ViewModelBase
 
     public void ResetRotation()
     {
+        if (!running)
+        {
+            return;
+        }
         factory.RobotDrehrichtung(0);
         factory.RobotResetRotation();
         NotifyRobotPositionChanged();
     }
 
+    // The black square: stops the continuous movement of the robot
     public void StopRobot()
     {
         factory.RobotStoppen();
@@ -154,22 +196,21 @@ public class MainViewModel : ViewModelBase
         continuousMode = false;
     }
 
-    // ---------- Brick timer ----------
-
-    public void StartTimer()
+    public void Undock()
     {
-        brickTimer.Start();
-    }
-
-    public void StopTimer()
-    {
-        brickTimer.Stop();
+        factory.RobotUndock();
+        NotifyRobotPositionChanged();
     }
 
     // ---------- Private helpers ----------
 
     private void RobotCommand(Direction direction)
     {
+        if (!running)
+        {
+            return;
+        }
+
         if (continuousMode)
         {
             factory.RobotRichtung(direction);
@@ -184,6 +225,11 @@ public class MainViewModel : ViewModelBase
 
     private void RotateCommand(int sign)
     {
+        if (!running)
+        {
+            return;
+        }
+
         if (continuousMode)
         {
             factory.RobotDrehrichtung(sign);
@@ -205,28 +251,14 @@ public class MainViewModel : ViewModelBase
     private void BrickTimer_Tick(object? sender, EventArgs e)
     {
         factory.LegoBricksBewegen();
-        RefreshBricks(redBricks, factory.ProductionRed);
-        RefreshBricks(greenBricks, factory.ProductionGreen);
-        RefreshBricks(blueBricks, factory.ProductionBlue);
-        RefreshBricks(yellowBricks, factory.ProductionYellow);
+        NotifyBricksChanged();
     }
 
-    private void CreateBrickViewModels(List<LegoBrickViewModel> list, ProductionLine line)
+    private void NotifyBricksChanged()
     {
-        for (int i = 0; i < line.Bricks.Count; i++)
+        foreach (LegoBrickViewModel brickViewModel in allBricks)
         {
-            LegoBrickViewModel brickViewModel = new LegoBrickViewModel(
-                line.Bricks[i], line.BrickX[i], line.BrickY[i], line.BrickWidth, line.BrickHeight);
-            list.Add(brickViewModel);
-            allBricks.Add(brickViewModel);
-        }
-    }
-
-    private void RefreshBricks(List<LegoBrickViewModel> list, ProductionLine line)
-    {
-        for (int i = 0; i < list.Count; i++)
-        {
-            list[i].Refresh(line.BrickX[i], line.BrickY[i]);
+            brickViewModel.Refresh();
         }
     }
 
@@ -236,5 +268,9 @@ public class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(RobotY));
         OnPropertyChanged(nameof(RobotAngle));
         OnPropertyChanged(nameof(RobotInfo));
+        OnPropertyChanged(nameof(GripperX));
+        OnPropertyChanged(nameof(GripperY));
+        OnPropertyChanged(nameof(DockInfo));
+        NotifyBricksChanged();   // a docked brick moves with the robot
     }
-}
+    }
