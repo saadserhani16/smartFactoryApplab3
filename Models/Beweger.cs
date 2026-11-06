@@ -136,7 +136,42 @@ public class Beweger
         VersucheZuSetzen(x, y, 0);
     }
 
+        // Puts the robot on a pose, only if there is no collision (used by the automatic route)
+    public void PoseSetzen(double newX, double newY, double newAngle)
+    {
+        VersucheZuSetzen(newX, newY, ((newAngle % 360) + 360) % 360);
+    }
+
     // ---------- Docking ----------
+
+    // Like DockingPruefen, but only the brick "nurDieses" may be grabbed (used by GoToPickUp).
+    // If nurDieses is null, any brick can be grabbed.
+    public void DockingPruefen(List<LegoBrick> bricks, LegoBrick? nurDieses)
+    {
+        if (dockobjekt != null)
+        {
+            return;
+        }
+
+        foreach (LegoBrick brick in bricks)
+        {
+            if (brick.Status != BrickStatus.onLine)
+            {
+                continue;
+            }
+            if (nurDieses != null && brick != nurDieses)
+            {
+                continue;
+            }
+
+            BerechneAbstand(brick);
+            if (abstand <= Parameters.dockDistance)
+            {
+                Dock(brick);
+                return;
+            }
+        }
+    }
 
     // Called after every movement: grabs a brick if the TCP is close enough.
     // Only bricks that wait on a production line or the recycle line can be grabbed,
@@ -226,7 +261,7 @@ public class Beweger
 
     // Sets kontakt to true if the robot at this pose (or its docked brick)
     // leaves the factory, or if the robot touches one of the production lines
-    private void PruefeKollision(double testX, double testY, double testAngle)
+    protected void PruefeKollision(double testX, double testY, double testAngle)
     {
         double radians = testAngle * Math.PI / 180.0;
         double cos = Math.Cos(radians);

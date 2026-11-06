@@ -151,48 +151,65 @@
             <Ellipse Width="6" Height="6" Fill="Magenta"
                      Canvas.Left="{Binding GripperX}" Canvas.Top="{Binding GripperY}"/>
 
-            <!-- ===== Order panel ===== -->
-            <TextBlock Canvas.Left="628" Canvas.Top="14" Text="Order" FontSize="22" FontWeight="Bold" Foreground="Black"/>
+            <!-- ===== Order button and order panel ===== -->
+            <Button Canvas.Left="626" Canvas.Top="8" Width="84" Height="34" Content="Order"
+                    FontWeight="Bold" Click="Order_Click"/>
             <TextBlock Canvas.Left="798" Canvas.Top="34" Text="Delivered" FontSize="13" FontWeight="Bold" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="54" Width="74" Height="32" Background="#F5DC1E">
                 <TextBlock Text="yellow" FontWeight="Bold" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBox Canvas.Left="720" Canvas.Top="54" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="720" Canvas.Top="54" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding YellowOrdered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
             <TextBox Canvas.Left="800" Canvas.Top="54" Width="70" Height="32" IsReadOnly="True"
                      Text="{Binding YellowDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="90" Width="74" Height="32" Background="#4169E1">
                 <TextBlock Text="blue" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBox Canvas.Left="720" Canvas.Top="90" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="720" Canvas.Top="90" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding BlueOrdered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
             <TextBox Canvas.Left="800" Canvas.Top="90" Width="70" Height="32" IsReadOnly="True"
                      Text="{Binding BlueDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="126" Width="74" Height="32" Background="#A5142C">
                 <TextBlock Text="red" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBox Canvas.Left="720" Canvas.Top="126" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="720" Canvas.Top="126" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding RedOrdered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
             <TextBox Canvas.Left="800" Canvas.Top="126" Width="70" Height="32" IsReadOnly="True"
                      Text="{Binding RedDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
             <Border Canvas.Left="628" Canvas.Top="162" Width="74" Height="32" Background="#2E9E2E">
                 <TextBlock Text="green" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
-            <TextBox Canvas.Left="720" Canvas.Top="162" Width="70" Height="32" Text="0" Background="#F3F7DC" Foreground="Black"/>
+            <TextBox Canvas.Left="720" Canvas.Top="162" Width="70" Height="32" IsReadOnly="True"
+                     Text="{Binding GreenOrdered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
             <TextBox Canvas.Left="800" Canvas.Top="162" Width="70" Height="32" IsReadOnly="True"
                      Text="{Binding GreenDelivered, Mode=OneWay}" Background="#F3F7DC" Foreground="Black"/>
 
+            <!-- ===== Order info, logistics plan and robot messages ===== -->
+            <TextBlock Canvas.Left="628" Canvas.Top="198" Width="250" Height="62" TextWrapping="Wrap"
+                       FontSize="12" FontWeight="Bold" Foreground="#1A3FA0"
+                       Text="{Binding OrderInfo}"/>
+
             <!-- ===== Start / Stop ===== -->
-            <Button Canvas.Left="626" Canvas.Top="204" Width="84" Height="32" Content="Start" Click="StartTimer_Click"/>
-            <Button Canvas.Left="714" Canvas.Top="204" Width="84" Height="32" Content="Stop" Click="StopTimer_Click"/>
+            <Button Canvas.Left="626" Canvas.Top="262" Width="84" Height="30" Content="Start" Click="StartTimer_Click"/>
+            <Button Canvas.Left="714" Canvas.Top="262" Width="84" Height="30" Content="Stop" Click="StopTimer_Click"/>
 
             <!-- ===== Docking status and Undock feedback ===== -->
-            <TextBlock Canvas.Left="628" Canvas.Top="250" FontSize="15" FontWeight="Bold" Foreground="Red"
+            <TextBlock Canvas.Left="628" Canvas.Top="296" FontSize="14" FontWeight="Bold" Foreground="Red"
                        Text="{Binding DockInfo}"/>
-            <TextBlock Canvas.Left="628" Canvas.Top="320" Width="250" TextWrapping="Wrap"
-                       FontSize="14" FontWeight="Bold" Foreground="#5A0000"
+            <TextBlock Canvas.Left="628" Canvas.Top="316" Width="250" Height="40" TextWrapping="Wrap"
+                       FontSize="13" FontWeight="Bold" Foreground="#5A0000"
                        Text="{Binding UndockMessage}"/>
+
+            <!-- ===== Setup, GoToPickUp, GoToDelivery ===== -->
+            <Button Canvas.Left="626" Canvas.Top="358" Width="120" Height="64" Click="SetupProductionLines_Click">
+                <TextBlock Text="Setup Production Lines" TextWrapping="Wrap" TextAlignment="Center"/>
+            </Button>
+            <Button Canvas.Left="750" Canvas.Top="358" Width="120" Height="30" Content="GoToPickUp" Click="GoToPickUp_Click"/>
+            <Button Canvas.Left="750" Canvas.Top="392" Width="120" Height="30" Content="GoToDelivery" Click="GoToDelivery_Click"/>
 
             <!-- ===== Move / Step mode and Undock ===== -->
             <RadioButton Canvas.Left="655" Canvas.Top="455" GroupName="Mode" Content="Move" IsChecked="True"

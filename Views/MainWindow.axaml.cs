@@ -100,4 +100,24 @@ public partial class MainWindow : Window
     {
         ViewModel.Undock();
     }
+
+    private void Order_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.CreateOrder();
+    }
+
+    private void SetupProductionLines_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.SetupProductionLines();
+    }
+
+    private void GoToPickUp_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.GoToPickUp();
+    }
+
+    private void GoToDelivery_Click(object? sender, RoutedEventArgs e)
+    {
+        ViewModel.GoToDelivery();
+    }
 }

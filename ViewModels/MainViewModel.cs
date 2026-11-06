@@ -6,12 +6,23 @@ namespace smartFactoryApp.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
+    // What the robot does by itself at the moment
+    private enum AutoModus
+    {
+        keiner,
+        abholen,
+        liefern
+    }
+
     private Factory factory;
     private DispatcherTimer brickTimer;
     private DispatcherTimer robotTimer;
     private bool continuousMode = true;
     private bool running = false;   // false until the Start button is pressed
     private string undockMessage = "";
+    private string robotMessage = "";
+    private AutoModus autoModus = AutoModus.keiner;
+    private int autoVersuche;
 
     private ObservableCollection<LegoBrickViewModel> allBricks = new ObservableCollection<LegoBrickViewModel>();
 
@@ -91,9 +102,32 @@ public class MainViewModel : ViewModelBase
             {
                 holding = factory.Robot.Dockobjekt.Color.ToString();
             }
-            return "Gripper: " + factory.Robot.GreifpunktX.ToString("F0") + ", " +
-                   factory.Robot.GreifpunktY.ToString("F0") + Environment.NewLine +
-                   "Holding: " + holding;
+            return "Holding: " + holding;
+        }
+    }
+
+    // The order, the logistics plan and the messages of the robot
+    public string OrderInfo
+    {
+        get
+        {
+            Logistics logistics = factory.Logistik;
+            string text;
+
+            if (!logistics.HasOrder)
+            {
+                text = "No order yet: click \"Order\"";
+            }
+            else
+            {
+                text = "Order: " + logistics.OrderText + Environment.NewLine + logistics.PlanText;
+            }
+
+            if (robotMessage != "")
+            {
+                text += Environment.NewLine + robotMessage;
+            }
+            return text;
         }
     }
 
@@ -103,24 +137,44 @@ public class MainViewModel : ViewModelBase
         get { return undockMessage; }
     }
 
+    public string YellowOrdered
+    {
+        get { return factory.Logistik.YellowOrdered.ToString(); }
+    }
+
+    public string BlueOrdered
+    {
+        get { return factory.Logistik.BlueOrdered.ToString(); }
+    }
+
+    public string RedOrdered
+    {
+        get { return factory.Logistik.RedOrdered.ToString(); }
+    }
+
+    public string GreenOrdered
+    {
+        get { return factory.Logistik.GreenOrdered.ToString(); }
+    }
+
     public string YellowDelivered
     {
-        get { return factory.YellowDelivered.ToString(); }
+        get { return factory.Logistik.YellowDelivered.ToString(); }
     }
 
     public string BlueDelivered
     {
-        get { return factory.BlueDelivered.ToString(); }
+        get { return factory.Logistik.BlueDelivered.ToString(); }
     }
 
     public string RedDelivered
     {
-        get { return factory.RedDelivered.ToString(); }
+        get { return factory.Logistik.RedDelivered.ToString(); }
     }
 
     public string GreenDelivered
     {
-        get { return factory.GreenDelivered.ToString(); }
+        get { return factory.Logistik.GreenDelivered.ToString(); }
     }
 
     // ---------- Start / Stop ----------
@@ -138,6 +192,61 @@ public class MainViewModel : ViewModelBase
         running = false;
         brickTimer.Stop();
         StopRobot();
+    }
+
+    // ---------- Order, setup and automatic driving ----------
+
+    // Button "Order": a new random order
+    public void CreateOrder()
+    {
+        ManuellStoppen();
+        factory.CreateOrder();
+        robotMessage = "";
+        NotifyOrderChanged();
+        NotifyRobotPositionChanged();
+    }
+
+    // Button "Setup Production Lines": 4 random bricks on every production line
+    public void SetupProductionLines()
+    {
+        ManuellStoppen();
+        factory.SetupProductionLines();
+        robotMessage = "";
+        SyncBricks();
+        NotifyBricksChanged();
+        NotifyOrderChanged();
+        NotifyRobotPositionChanged();
+    }
+
+    // Button "GoToPickUp": the robot drives to the next brick of the logistics plan and grabs it
+    public void GoToPickUp()
+    {
+        if (!running)
+        {
+            robotMessage = "Press Start first.";
+            OnPropertyChanged(nameof(OrderInfo));
+            return;
+        }
+
+        ManuellStoppen();
+        autoVersuche = 0;
+        factory.GoToPickUp();
+        GoToErgebnisAuswerten(AutoModus.abholen);
+    }
+
+    // Button "GoToDelivery": the robot drives to the delivery line with its brick
+    public void GoToDelivery()
+    {
+        if (!running)
+        {
+            robotMessage = "Press Start first.";
+            OnPropertyChanged(nameof(OrderInfo));
+            return;
+        }
+
+        ManuellStoppen();
+        factory.GoToDelivery();
+        GoToErgebnisAuswerten(AutoModus.liefern);
     }
 
     // ---------- Robot buttons (all directions are relative to the robot) ----------
@@ -198,16 +307,16 @@ public class MainViewModel : ViewModelBase
         {
             return;
         }
-        factory.RobotDrehrichtung(0);
+        ManuellStoppen();
         factory.RobotResetRotation();
         NotifyRobotPositionChanged();
     }
 
-    // The black square: stops the continuous movement of the robot
+    // The black square: stops the robot (also an automatic drive)
     public void StopRobot()
     {
-        factory.RobotStoppen();
-        robotTimer.Stop();
+        ManuellStoppen();
+        OnPropertyChanged(nameof(OrderInfo));
     }
 
     public void SetMoveMode()
@@ -251,16 +360,31 @@ public class MainViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(UndockMessage));
+        OnPropertyChanged(nameof(OrderInfo));
         NotifyRobotPositionChanged();
     }
 
     // ---------- Private helpers ----------
+
+    // Stops the continuous movement and an automatic drive
+    private void ManuellStoppen()
+    {
+        factory.RobotStoppen();
+        robotTimer.Stop();
+        autoModus = AutoModus.keiner;
+    }
 
     private void RobotCommand(Direction direction)
     {
         if (!running)
         {
             return;
+        }
+
+        if (autoModus != AutoModus.keiner)
+        {
+            ManuellStoppen();
+            robotMessage = "";
         }
 
         if (continuousMode)
@@ -282,6 +406,12 @@ public class MainViewModel : ViewModelBase
             return;
         }
 
+        if (autoModus != AutoModus.keiner)
+        {
+            ManuellStoppen();
+            robotMessage = "";
+        }
+
         if (continuousMode)
         {
             factory.RobotDrehrichtung(sign);
@@ -294,10 +424,88 @@ public class MainViewModel : ViewModelBase
         NotifyRobotPositionChanged();
     }
 
+    // Starts the automatic drive, or shows why it is not possible
+    private void GoToErgebnisAuswerten(AutoModus modus)
+    {
+        GoToResult ergebnis = factory.GoToErgebnis;
+
+        if (ergebnis == GoToResult.started)
+        {
+            autoModus = modus;
+            if (modus == AutoModus.abholen)
+                robotMessage = "Driving to the brick...";
+            else
+                robotMessage = "Driving to the delivery line...";
+            robotTimer.Start();
+        }
+        else
+        {
+            autoModus = AutoModus.keiner;
+            robotTimer.Stop();
+
+            if (ergebnis == GoToResult.noOrder)
+                robotMessage = "Click \"Order\" first.";
+            else if (ergebnis == GoToResult.orderComplete)
+                robotMessage = "Nothing left to pick up.";
+            else if (ergebnis == GoToResult.noBrickAvailable)
+                robotMessage = "No needed brick on the lines: click Setup.";
+            else if (ergebnis == GoToResult.alreadyHolding)
+                robotMessage = "The robot holds a brick: use GoToDelivery.";
+            else if (ergebnis == GoToResult.noBrickHeld)
+                robotMessage = "No brick to deliver: use GoToPickUp.";
+            else
+                robotMessage = "No route found.";
+        }
+
+        OnPropertyChanged(nameof(OrderInfo));
+        NotifyRobotPositionChanged();
+    }
+
+    // Called when the automatic route is finished
+    private void AutoAbschliessen()
+    {
+        if (autoModus == AutoModus.abholen)
+        {
+            if (factory.Robot.Dockobjekt != null)
+            {
+                robotMessage = "Picked up a " + factory.Robot.Dockobjekt.Color + " brick.";
+                ManuellStoppen();
+            }
+            else if (autoVersuche < Parameters.maxPickupTries)
+            {
+                // The brick moved away on its line: plan the route again
+                autoVersuche++;
+                factory.GoToPickUp();
+                GoToErgebnisAuswerten(AutoModus.abholen);
+                return;
+            }
+            else
+            {
+                robotMessage = "Could not grab the brick: try GoToPickUp.";
+                ManuellStoppen();
+            }
+        }
+        else if (autoModus == AutoModus.liefern)
+        {
+            if (factory.Robot.RouteBlockiert)
+                robotMessage = "The route was blocked.";
+            else
+                robotMessage = "At the delivery line: press Undock.";
+            ManuellStoppen();
+        }
+
+        OnPropertyChanged(nameof(OrderInfo));
+    }
+
     private void RobotTimer_Tick(object? sender, EventArgs e)
     {
         factory.RobotWeiterBewegen();
         NotifyRobotPositionChanged();
+
+        if (autoModus != AutoModus.keiner && !factory.Robot.RouteAktiv)
+        {
+            AutoAbschliessen();
+        }
     }
 
     private void BrickTimer_Tick(object? sender, EventArgs e)
@@ -305,7 +513,7 @@ public class MainViewModel : ViewModelBase
         factory.LegoBricksBewegen();
         SyncBricks();
         NotifyBricksChanged();
-        NotifyDeliveredChanged();
+        NotifyOrderChanged();
         OnPropertyChanged(nameof(DockInfo));
     }
 
@@ -346,12 +554,17 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    private void NotifyDeliveredChanged()
+    private void NotifyOrderChanged()
     {
+        OnPropertyChanged(nameof(YellowOrdered));
+        OnPropertyChanged(nameof(BlueOrdered));
+        OnPropertyChanged(nameof(RedOrdered));
+        OnPropertyChanged(nameof(GreenOrdered));
         OnPropertyChanged(nameof(YellowDelivered));
         OnPropertyChanged(nameof(BlueDelivered));
         OnPropertyChanged(nameof(RedDelivered));
         OnPropertyChanged(nameof(GreenDelivered));
+        OnPropertyChanged(nameof(OrderInfo));
     }
 
     private void NotifyRobotPositionChanged()
