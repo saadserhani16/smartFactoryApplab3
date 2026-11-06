@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 
@@ -5,7 +6,7 @@ namespace smartFactoryApp;
 
 public class ProductionLine
 {
-    private LegoColor color;
+    private string name;
     private Rectangle box;
     private bool vertical;
     private Direction brickSide;
@@ -17,11 +18,12 @@ public class ProductionLine
     private int direction = 1;
     private double maxShift;
     private LegoBrick? neuesBrick;
+    private List<LegoBrick> neueBricks = new List<LegoBrick>();
 
     // brickSide = the edge of the box where the bricks sit (left, right, up or down)
-    public ProductionLine(LegoColor color, Rectangle box, bool vertical, Direction brickSide, bool beweglich)
+    public ProductionLine(string name, Rectangle box, bool vertical, Direction brickSide, bool beweglich)
     {
-        this.color = color;
+        this.name = name;
         this.box = box;
         this.vertical = vertical;
         this.brickSide = brickSide;
@@ -38,15 +40,6 @@ public class ProductionLine
             brickHeight = Parameters.brickShort;
         }
 
-        // Production lines start with 4 bricks, the recycle line starts empty
-        if (beweglich)
-        {
-            for (int i = 0; i < Parameters.bricksPerLine; i++)
-            {
-                slots[i] = new LegoBrick(color, LegoSize.large, brickWidth, brickHeight);
-            }
-        }
-
         double boxLength = box.Width;
         if (vertical)
         {
@@ -54,13 +47,11 @@ public class ProductionLine
         }
         double halfSpan = (Parameters.bricksPerLine - 1) / 2.0 * Parameters.brickSpacing + Parameters.brickLong / 2.0;
         maxShift = boxLength / 2.0 - 2 - halfSpan;
-
-        UpdatePositions();
     }
 
-    public LegoColor Color
+    public string Name
     {
-        get { return color; }
+        get { return name; }
     }
 
     public Rectangle Box
@@ -76,6 +67,24 @@ public class ProductionLine
     public int BrickHeight
     {
         get { return brickHeight; }
+    }
+
+    // The angle the robot needs so that its gripper points at the bricks of this line
+    // (0 = up, 90 = right, 180 = down, 270 = left)
+    public int AnfahrWinkel
+    {
+        get
+        {
+            if (vertical)
+            {
+                if (brickSide == Direction.right)
+                    return 270;
+                return 90;
+            }
+            if (brickSide == Direction.down)
+                return 0;
+            return 180;
+        }
     }
 
     // The bricks that are on this line at the moment
@@ -99,6 +108,12 @@ public class ProductionLine
     public LegoBrick? NeuesBrick
     {
         get { return neuesBrick; }
+    }
+
+    // The bricks that Fuellen made
+    public List<LegoBrick> NeueBricks
+    {
+        get { return neueBricks; }
     }
 
     // True if at least one place on this line is free
@@ -142,8 +157,44 @@ public class ProductionLine
         UpdatePositions();
     }
 
+    // Removes all bricks that wait on this line
+    public void Leeren()
+    {
+        SlotsFreigeben();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            LegoBrick? brick = slots[i];
+            if (brick != null && brick.Status == BrickStatus.onLine)
+            {
+                slots[i] = null;
+            }
+        }
+    }
+
+    // Puts a new brick with a random color into every free place (25% chance for each color)
+    public void Fuellen(Random random)
+    {
+        neueBricks = new List<LegoBrick>();
+        SlotsFreigeben();
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null)
+            {
+                LegoColor color = (LegoColor)random.Next(4);
+                LegoBrick brick = new LegoBrick(color, LegoSize.large, brickWidth, brickHeight);
+                brick.SetzeHerkunft(this);
+                slots[i] = brick;
+                neueBricks.Add(brick);
+            }
+        }
+
+        UpdatePositions();
+    }
+
     // A brick was delivered to the customer: the line makes a new one in a free place
-    public void ErsatzProduzieren()
+    public void ErsatzProduzieren(LegoColor color)
     {
         neuesBrick = null;
         SlotsFreigeben();
@@ -153,6 +204,7 @@ public class ProductionLine
             if (slots[i] == null)
             {
                 neuesBrick = new LegoBrick(color, LegoSize.large, brickWidth, brickHeight);
+                neuesBrick.SetzeHerkunft(this);
                 slots[i] = neuesBrick;
                 break;
             }

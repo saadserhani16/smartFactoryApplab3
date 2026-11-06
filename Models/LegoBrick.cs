@@ -16,6 +16,7 @@ public class LegoBrick
     private bool qualitaetGut;
     private int wartezeit;
     private bool aufDeliveryLinie;
+    private ProductionLine? herkunft;   // the production line that made this brick
 
     public LegoBrick(LegoColor color, LegoSize size, int width, int height)
     {
@@ -76,6 +77,16 @@ public class LegoBrick
     public bool AufDeliveryLinie
     {
         get { return aufDeliveryLinie; }
+    }
+
+    public ProductionLine? Herkunft
+    {
+        get { return herkunft; }
+    }
+
+    public void SetzeHerkunft(ProductionLine line)
+    {
+        herkunft = line;
     }
 
     public void SetzePose(double newX, double newY, double newAngle)

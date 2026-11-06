@@ -46,10 +46,22 @@ public enum UndockResult
     notOnDeliveryLine
 }
 
+// Result of pressing GoToPickUp or GoToDelivery
+public enum GoToResult
+{
+    started,
+    noOrder,
+    orderComplete,
+    noBrickAvailable,
+    alreadyHolding,
+    noBrickHeld,
+    noRoute
+}
+
 public class Parameters
 {
     public const int step = 10;               // pixels per click in Step mode
-    public const int rotationStep = 15;       // degrees per click in Step mode
+    public const int rotationStep = 5;       // degrees per click in Step mode
     public const int continuousStep = 4;      // pixels per tick in Move mode
     public const int continuousRotation = 2;  // degrees per tick in Move mode
     public const int robotTimerInterval = 20; // ms
@@ -69,4 +81,9 @@ public class Parameters
     public const int deliverySpeed = 3;       // pixels per tick for bricks that leave the delivery line
     public const int deliveryWaitTicks = 25;  // a brick rests this long on the delivery line (25 x 40 ms = 1 s)
     public const int repairTicks = 60;        // repair time on the recycle line (60 x 40 ms = 2.4 s)
+
+    public const int orderSize = 5;           // an order has 1 to 5 bricks
+    public const int routeStep = 5;           // the automatic route moves in steps of 5 pixels
+    public const int routeGoalDistance = 6;   // the route ends when the gripper is this close to the brick
+    public const int maxPickupTries = 6;      // how often GoToPickUp plans again if the brick moved away
 }
